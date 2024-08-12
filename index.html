@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Management System</title>
+    <style>
+        .file-item {
+            display: inline-block;
+            margin: 10px;
+            text-align: center;
+        }
+        #confirmation-modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            border: 1px solid black;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div id="file-container"></div>
+
+    <!-- Confirmation Modal -->
+    <div id="confirmation-modal">
+        <p id="modal-message"></p>
+        <button id="confirm-btn">Confirm</button>
+        <button id="cancel-btn">Cancel</button>
+    </div>
+
+    <script>
+        const fileIcons = {
+            '.txt': 'https://via.placeholder.com/200?text=TXT',
+            '.pdf': 'https://via.placeholder.com/200?text=PDF',
+            '.mp3': 'https://via.placeholder.com/200?text=MP3',
+            '.exe': 'https://via.placeholder.com/200?text=EXE',
+            '.rar': 'https://via.placeholder.com/200?text=RAR',
+            '.docx': 'https://via.placeholder.com/200?text=DOCX',
+            '.jpg': 'https://via.placeholder.com/200?text=JPG',
+            '.png': 'https://via.placeholder.com/200?text=PNG',
+            '.gif': 'https://via.placeholder.com/200?text=GIF',
+            '.zip': 'https://via.placeholder.com/200?text=ZIP',
+        };
+
+        function displayFiles() {
+            const container = document.getElementById('file-container');
+            if (!container) {
+                console.error('File container not found');
+                return;
+            }
+            container.innerHTML = ''; 
+
+            const fileData = JSON.parse(localStorage.getItem('fileData'));
+
+            if (!fileData || !fileData.files || !fileData.bin) {
+                console.error('File data is missing or corrupted');
+                return;
+            }
+
+            function createFileElement(file, isBin = false) {
+                const extension = file.slice(file.lastIndexOf('.'));
+                const iconUrl = fileIcons[extension] || 'https://via.placeholder.com/200?text=Unknown'; 
+                const fileName = file.slice(0, file.lastIndexOf('.'));
+
+                const fileDiv = document.createElement('div');
+                fileDiv.classList.add('file-item');
+                fileDiv.innerHTML = `
+                    <img src="${iconUrl}" alt="${extension} icon">
+                    <p>${fileName}${isBin ? ' (in Bin)' : ''}</p>
+                    ${!isBin ? `<button onclick="moveToBin('${file}')">Move to Bin</button>` : ''}
+                `;
+                return fileDiv;
+            }
+
+            fileData.files.forEach(file => {
+                container.appendChild(createFileElement(file));
+            });
+
+            fileData.bin.forEach(file => {
+                container.appendChild(createFileElement(file, true));
+            });
+        }
+
+        function moveToBin(fileName) {
+            const fileData = JSON.parse(localStorage.getItem('fileData'));
+
+            if (!fileData || !fileData.files || !fileData.bin) {
+                console.error('File data is missing or corrupted');
+                return;
+            }
+
+            if (!fileData.bin.includes(fileName)) {
+                fileData.bin.push(fileName);
+                setTimeout(() => autoDeleteFile(fileName), 30000); 
+            }
+
+            const index = fileData.files.indexOf(fileName);
+            if (index > -1) {
+                fileData.files.splice(index, 1);
+            }
+
+            localStorage.setItem('fileData', JSON.stringify(fileData));
+            displayFiles();
+        }
+
+        function autoDeleteFile(fileName) {
+            const fileData = JSON.parse(localStorage.getItem('fileData'));
+
+            if (!fileData || !fileData.bin) {
+                console.error('File data is missing or corrupted');
+                return;
+            }
+
+            const index = fileData.bin.indexOf(fileName);
+            if (index > -1) {
+                fileData.bin.splice(index, 1);
+                localStorage.setItem('fileData', JSON.stringify(fileData));
+                displayFiles();
+            }
+        }
+
+        function initializeLocalStorage() {
+            if (!localStorage.getItem('fileData')) {
+                localStorage.setItem('fileData', JSON.stringify({ files: ['document1.txt', 'presentation1.pdf'], bin: [] }));
+            }
+            if (!localStorage.getItem('fileHistory')) {
+                localStorage.setItem('fileHistory', JSON.stringify({}));
+            }
+        }
+
+        initializeLocalStorage();
+        displayFiles();
+    </script>
+</body>
+</html>
